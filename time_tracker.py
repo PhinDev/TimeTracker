@@ -1,9 +1,10 @@
-import datetime
 import time
 import bpy
 
 from .functions import get_properties, get_time_pretty, get_time_track_file, persist_time_info, read_json
 
+# TODO groups for blend files (time table etc.)
+# TODO tracking hours per day with dates etc.
  
 class TIME_TRACKER_OT_pause(bpy.types.Operator):
     bl_idname = "time_tracker.pause"
@@ -107,6 +108,8 @@ class TimeTracker():
         diff = int(now - self._last_timing)
         self._last_timing = now
 
+        """
+        # set tracking stop
         if self._last_interaction_time > 0 and (now - self._last_interaction_time) > props.interaction_threshhold:
             if self._is_active:
                 props.time = props.time - props.interaction_threshhold
@@ -116,11 +119,12 @@ class TimeTracker():
                 print(f"Not tracking due to inactivity. Stopped tracking at {local_time.strftime('%H:%M:%S')} - time record: {tt.get_work_time(props)}")
             self._is_active = False
             return 0
-        
+
         if not self._is_active: # set last stop
             local_time = datetime.datetime.now()
             self._last_tracking_stop["stop"] = local_time.strftime('%H:%M:%S')
             self._is_active = True
+        """
 
         if props.tracking:
             props.time = props.time + diff

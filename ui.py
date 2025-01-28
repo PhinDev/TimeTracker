@@ -1,10 +1,8 @@
 import bpy
-import os
-import time
-import datetime
 
 from .time_tracker import tt
-from .functions import get_data_dir, get_properties
+from .functions import get_properties
+
 
 class UI_TimeTracker(bpy.types.Panel):
     """Creates a Panel in the scene context of sidebar"""
@@ -25,7 +23,8 @@ class UI_TimeTracker(bpy.types.Panel):
         row = box.row()
         row.label(text="Time:")
         row.label(text=tt.get_work_time(props))
-        box.prop(props, "interaction_threshhold", text='Inactivity Threshhold (s)')
+        
+        #box.prop(props, "interaction_threshhold", text='Inactivity Threshhold (s)')
         
         last_stop = tt.get_last_stop()
         if last_stop:
@@ -41,9 +40,9 @@ class UI_TimeTracker(bpy.types.Panel):
 
         #tt.update_time(props) # has to run but only updates diff when active
         if props.tracking:
-            box.operator("time_tracker.pause", icon='PAUSE')
+            box.operator("time_tracker.pause", icon='PAUSE', text='Pause')
         else:
-            box.operator("time_tracker.continue", icon='PLAY')
+            box.operator("time_tracker.continue", icon='PLAY', text='Continue (paused)')
 
         box = layout.box()
         box.operator("time_tracker.show_time_table", text="Show Time Table")

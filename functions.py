@@ -1,8 +1,6 @@
 import json
 import os
 import configparser
-from pathlib import Path
-import shutil
 import bpy
 
 
@@ -85,10 +83,9 @@ def get_time_pretty(seconds: int) -> str:
 """
 returns data_dir path
 """
-def get_data_dir():    
-    config_dir = bpy.utils.user_resource(resource_type='SCRIPTS', path="addons")
-    addon_name = get_attr_from_manifest("id")
-    return os.path.join(config_dir, addon_name, "data")
+def get_data_dir():
+    return bpy.utils.extension_path_user(package=__package__, path="data", create=True)
+
 
 from .properties import TIME_TRACK_FILE
 def get_time_track_file():
@@ -99,14 +96,23 @@ def get_time_track_file():
 # TODO more functionality
 # - save dates when worked on file (first, last or every date...)
 # - hours/day
+"""
+persist_time_info()
+    this method is responsible for converting and 
+    saving the blend files time property to the disk
+"""
 def persist_time_info(tracking_file, time):
     data = {}
     if os.path.exists(tracking_file):
         data = read_json(tracking_file)
     
     blend_file = bpy.data.filepath
+    if not blend_file:
+        return False
 
     data[blend_file] = { "seconds": time, "time": get_time_pretty(seconds=time)}
 
     write_json(data, tracking_file)
     print(f"Saving time tracking data {data[blend_file]} in {tracking_file}")
+
+    return True
