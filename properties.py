@@ -12,6 +12,12 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
         default=0
     ) # type: ignore
 
+    session_time: bpy.props.IntProperty(
+        name="session time",
+        description="Time spent on this file in one session",
+        default=0
+    ) # type: ignore
+
     tracking: bpy.props.BoolProperty(
         name="is_tracking",
         description="Returns if time tracking is running",
@@ -24,6 +30,24 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
         default=120
     ) # type: ignore
 
+
+    # TODO UI sessions group per day
+
+    session_sort: bpy.props.EnumProperty(
+        name="Sort",
+        description="sort sessions",
+        items=[
+            ('0', "Latest first", ""), 
+            ('1', "Oldest first", "")
+            ],
+        default='0'
+    ) # type: ignore
+
+    session_filter: bpy.props.StringProperty(
+        name="Filter",
+        description="Filter sessions (id, date)",
+        default=""
+    ) # type: ignore
 
 # Registration-Funktionen, falls nicht automatisch registriert:
 def register():

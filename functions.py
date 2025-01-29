@@ -1,7 +1,9 @@
 import json
 import os
 import configparser
+from typing import List
 import bpy
+from datetime import date as d, datetime
 
 
 def write_json(data, file):
@@ -63,21 +65,11 @@ def get_blender_path(path):
     return abs_path
 
 
-import tomllib
-def get_attr_from_manifest(attribute):
-    # Verzeichnis des Add-ons ermitteln
-    addon_dir = os.path.dirname(__file__)
-    manifest_path = os.path.join(addon_dir, "blender_manifest.toml")
-    
-    if os.path.exists(manifest_path):
-        with open(manifest_path, "rb") as f:  # Verwenden Sie "r" für `toml` statt `tomllib`
-            manifest = tomllib.load(f)
-            return manifest.get(attribute)  # ID aus der Datei holen
-    return None
-
 import datetime
 def get_time_pretty(seconds: int) -> str:
-    return str(datetime.timedelta(seconds=seconds))
+    time = str(datetime.timedelta(seconds=seconds))
+    hours, minutes, seconds = time.split(':')
+    return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
 
 
 """
@@ -101,7 +93,7 @@ persist_time_info()
     this method is responsible for converting and 
     saving the blend files time property to the disk
 """
-def persist_time_info(tracking_file, time):
+def persist_time_info(tracking_file, timing_obj):
     data = {}
     if os.path.exists(tracking_file):
         data = read_json(tracking_file)
@@ -110,9 +102,100 @@ def persist_time_info(tracking_file, time):
     if not blend_file:
         return False
 
-    data[blend_file] = { "seconds": time, "time": get_time_pretty(seconds=time)}
+    #data[blend_file] = { "seconds": time, "time": get_time_pretty(seconds=time)}
+    data.update(timing_obj.to_dict())
 
     write_json(data, tracking_file)
     print(f"Saving time tracking data {data[blend_file]} in {tracking_file}")
 
     return True
+
+
+# ADVANCED TIMING ENGINE
+
+class TimingModel():
+    def __init__(self, blend_file: str, seconds: int, sessions):
+        self.blend_file = blend_file
+        self.seconds = seconds
+        self.time_formatted = get_time_pretty(seconds=self.seconds)
+        self.sessions = sessions
+        if not self.sessions and self.seconds > 0:
+            self.add_session(session_seconds=self.seconds, date="Before")
+
+
+    def get_new_session_id(self) -> int:
+        if not self.sessions:
+            return 0
+        return max(session["id"] for session in self.sessions) + 1    
+
+
+    def add_session(self, session_seconds: int, date: str = d.today().strftime('%Y-%m-%d')):
+        dates = []
+        dates.append(date)
+        session_id = self.get_new_session_id()
+
+        session = {
+            "id": session_id,
+            "dates": dates,
+            "seconds": session_seconds,
+            "time": get_time_pretty(seconds=session_seconds)
+        }
+        self.sessions.append(session)
+        print(f"Session added {session['id']}")
+
+    """
+    updates current session
+    (if required at some point add 'session' parameter)
+    """
+    def update_session(self, seconds, session_seconds: int):
+        session = self.get_current_session()
+        if not session:
+            return
+        self.seconds = seconds
+        self.time_formatted = get_time_pretty(seconds=self.seconds)
+
+        session["seconds"] = session_seconds
+
+        date: str = d.today().strftime('%Y-%m-%d')
+        if date not in session["dates"]:
+            session["dates"].append(date)
+
+        session["time"] = get_time_pretty(seconds=session_seconds)
+        #print(f"Session updated {session['id']}")
+    
+
+    def get_current_session(self):
+        return self.sessions[-1] if len(self.sessions) > 0 else None
+
+
+    def remove_session(self, session_id: int):
+        self.sessions = [s for s in self.sessions if s["id"] != session_id]
+    
+
+    def to_dict(self) -> dict:
+        return {
+            self.blend_file: {
+                "seconds": self.seconds,
+                "time": self.time_formatted,
+                "sessions": self.sessions
+            }
+        }
+    
+    
+    @classmethod
+    def from_dict(cls, blend_file: str, seconds: int = 0, sessions = []):
+        return cls(blend_file, seconds, sessions)
+    
+
+    @classmethod
+    def load_single_from_json(cls, file_path: str, blend_file: str):
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            if blend_file in data:
+                content = data[blend_file]
+                return cls(blend_file, content.get("seconds", 0), content.get("sessions", []))
+        except Exception as e:
+            print(e)
+        return None
+    
