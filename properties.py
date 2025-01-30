@@ -1,8 +1,20 @@
 import bpy
 
+from .functions import get_properties
+
 # BLENDER PROPERTIES
 
 TIME_TRACK_FILE = 'time_tracks.json'
+
+
+def toggle_stop_and_go(self, context):
+    try:
+        props = get_properties(context)
+        if props.stopp_and_go:
+            bpy.ops.wm.modal_event_logger()
+        # else: logger will shutdown itself
+    except Exception as e:
+        print(e)
 
 class TimeTrackerProperties(bpy.types.PropertyGroup):
 
@@ -24,12 +36,18 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
         default=True
     ) # type: ignore
     
+    stopp_and_go: bpy.props.BoolProperty(
+        name="stopp and go",
+        description="Detects inactivity based on threshhold and stopps/starts tracking",
+        default=True,
+        update=toggle_stop_and_go
+    ) # type: ignore
+
     interaction_threshhold: bpy.props.IntProperty(
         name="interaction_threshhold",
         description="Thresshold of inactivity (when to stop timing) in seconds",
         default=120
     ) # type: ignore
-
 
     # TODO UI sessions group per day
 
@@ -49,9 +67,11 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
         default=""
     ) # type: ignore
 
+
 # Registration-Funktionen, falls nicht automatisch registriert:
 def register():
     bpy.types.Scene.time_tracker_props = bpy.props.PointerProperty(type=TimeTrackerProperties)
 
 def unregister():
     del bpy.types.Scene.time_tracker_props
+

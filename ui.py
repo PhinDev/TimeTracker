@@ -27,27 +27,17 @@ class UI_TimeTracker(bpy.types.Panel):
         row.label(text="Session Time:")
         row.label(text=tt.get_session_time(props))
         
-        #box.prop(props, "interaction_threshhold", text='Inactivity Threshhold (s)')
-        
-        # STOPS
-        last_stop = tt.get_last_stop()
-        if last_stop:
-            box_ls = box.box()
-            box_ls.label(text="Last Stop:")
-            row_ls = box_ls.row()
-            row_ls.label(text="From:")
-            row_ls.label(text=str(last_stop["start"]))
-            
-            row_ls = box_ls.row()
-            row_ls.label(text="To:")
-            row_ls.label(text=str(last_stop["stop"]))
+        box.prop(props, 'stopp_and_go', text="Stopp & Go")
+        if props.stopp_and_go:
+            box.prop(props, 'interaction_threshhold', text="Inactivity Threshhold (s)")
+        else:
+            if props.tracking:
+                box.operator("time_tracker.pause", icon='PAUSE', text='Pause')
+            else:
+                box.operator("time_tracker.continue", icon='PLAY', text='Continue (paused)')
+
 
         #tt.update_time(props) # has to run but only updates diff when active
-        if props.tracking:
-            box.operator("time_tracker.pause", icon='PAUSE', text='Pause')
-        else:
-            box.operator("time_tracker.continue", icon='PLAY', text='Continue (paused)') # FIXME reset on file start (always running on start)
-
         box = layout.box()
         box.operator("time_tracker.show_time_table", text="Show Time Table")
         # TODO button to open time track file

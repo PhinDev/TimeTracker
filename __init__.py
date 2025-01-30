@@ -32,23 +32,6 @@ def load_handler(dummy):
         bpy.app.timers.register(init, first_interval=0.1)
 
     tt.load_session()
-    """
-    # LAST INTERACT. HANDLER
-    if track_last_interaction in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(track_last_interaction)
-    print("Adding handler 'track_last_interaction'.")
-    
-    bpy.app.handlers.depsgraph_update_post.append(track_last_interaction)
-    """
-"""
-import time
-def track_last_interaction(scene):
-    try:
-        tt._last_interaction_time = int(time.time())  # Setze den Zeitstempel auf den aktuellen Zeitpunkt
-        print(f"Letzte Interaktion: {tt._last_interaction_time}")
-    except Exception as e:
-        print(f"Last interaction not documented. Error {e}.")
-"""
 
 
 @persistent
@@ -85,7 +68,8 @@ def init():
         props = c.scene.time_tracker_props
         props.session_time = 0
         props.tracking = True
-        print(f"Init - session time: {props.session_time}")
+        bpy.ops.wm.modal_event_logger()
+        print(f"Init")
     except Exception as e:
         print(e)
     
@@ -125,10 +109,5 @@ def unregister():
     if on_save_file in bpy.app.handlers.save_pre:
         bpy.app.handlers.save_pre.remove(on_save_file)
 
-    """
-    if track_last_interaction in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(track_last_interaction)
-    """
-    
     auto_load.unregister()
 

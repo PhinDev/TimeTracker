@@ -1,6 +1,6 @@
 import time
 import bpy
-from datetime import datetime
+import datetime
 
 from .functions import TimingModel, get_properties, get_time_pretty, get_time_track_file, persist_time_info, read_json
 
@@ -86,7 +86,6 @@ class TimeTracker():
     _timing_obj: TimingModel = None
     _last_timing = 0
     _last_interaction_time = 0
-    _is_active = True
     
     _last_tracking_stop = {
         "start": None,
@@ -129,24 +128,10 @@ class TimeTracker():
         diff = int(now - self._last_timing)
         self._last_timing = now
 
-        """
-        # set tracking stop
-        if self._last_interaction_time > 0 and (now - self._last_interaction_time) > props.interaction_threshhold:
-            if self._is_active:
-                props.time = props.time - props.interaction_threshhold
-                local_time = datetime.datetime.now() - datetime.timedelta(seconds=props.interaction_threshhold)
-                self._last_tracking_stop["start"] = local_time.strftime('%H:%M:%S')
-                #print(f"Not tracking due to inactivity. Stopped at {str(local_time.strftime("%H:%M:%S"))}")
-                print(f"Not tracking due to inactivity. Stopped tracking at {local_time.strftime('%H:%M:%S')} - time record: {tt.get_work_time(props)}")
-            self._is_active = False
-            return 0
-
-        if not self._is_active: # set last stop
-            local_time = datetime.datetime.now()
-            self._last_tracking_stop["stop"] = local_time.strftime('%H:%M:%S')
-            self._is_active = True
-        """
-
+        # set inactive (stop)
+        if props.stopp_and_go:
+            self.stopp_and_go(props, now) # set props.tracking autom.
+            
         if props.tracking:
             # Blender Properties
             props.time = props.time + diff
@@ -164,15 +149,25 @@ class TimeTracker():
         return props.time
     
 
+    def stopp_and_go(self, props, now):
+        if self._last_interaction_time > 0 and (now - self._last_interaction_time) > props.interaction_threshhold:
+            # USER INACTIVE
+            if props.tracking:
+                props.time = props.time - props.interaction_threshhold
+                props.session_time = props.session_time - props.interaction_threshhold
+                print(f"{props.time} {props.interaction_threshhold}")
+                local_time = datetime.datetime.now() - datetime.timedelta(seconds=props.interaction_threshhold)
+                print(f"Not tracking due to inactivity. Stopped tracking at {local_time.strftime('%H:%M:%S')} - session time: {tt.get_session_time(props)}")
+            props.tracking = False
+            return
+
+        # USER ACTIVE
+        if not props.tracking:
+            props.tracking = True
+
+
     def get_all_sessions(self):
         return self._timing_obj.sessions if self._timing_obj else None
-
-
-    def get_last_stop(self):
-        stp = self._last_tracking_stop
-        if stp["start"] is None or stp["stop"] is None or stp["start"] >= stp["stop"]:
-            return None
-        return self._last_tracking_stop
 
 
     def save(self):
@@ -182,9 +177,56 @@ tt = TimeTracker()
 
 
 
-# Registrierung des Handlers
-def register():
-    pass
+class ModalEventLoggerOperator(bpy.types.Operator):
+    """Ein Operator, der Benutzereingaben loggt, aber nicht blockiert"""
+    bl_idname = "wm.modal_event_logger"
+    bl_label = "Modal Event Logger"
+    
+    _timer = None
 
-def unregister():
-    pass
+    def modal(self, context, event):
+        #if event.type == 'LEFTMOUSE':
+        #print(f"Event: {event.type}, Value: {event.value}")
+
+        props = get_properties(context)
+        if not props.stopp_and_go: # TODO optimize shutdown (less code when running)
+            self.cancel(context)
+            return {'CANCELLED'}
+
+        track_last_interaction()
+
+        # Weiterleiten des Events
+        return {'PASS_THROUGH'}  # 'PASS_THROUGH' sorgt dafür, dass das Event nicht blockiert wird
+
+    def execute(self, context):
+        # Timer hinzufügen (alle 0.1 Sekunden)
+        #self._timer = context.window_manager.event_timer_add(0.1, window=context.window) # hintergrund operationen (brauchen wir hier nicht)
+        if context.window_manager.get("modal_logger_running", False):
+            self.report({'WARNING'}, "Modal Logger already running!")
+            self.cancel(context)
+            
+        context.window_manager.modal_handler_add(self)
+        context.window_manager["modal_logger_running"] = True
+
+        print("Logger started")
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        # Timer entfernen, wenn der Operator gestoppt wird
+        #if self._timer:
+        #    context.window_manager.event_timer_remove(self._timer)
+
+        context.window_manager["modal_logger_running"] = False
+        print("Logger stopped")
+
+    def invoke(self, context, event):
+        return self.execute(context)
+
+
+import time
+def track_last_interaction():
+    try:
+        tt._last_interaction_time = int(time.time())  # Setze den Zeitstempel auf den aktuellen Zeitpunkt
+        #print(f"Letzte Interaktion: {tt._last_interaction_time}")
+    except Exception as e:
+        print(f"Last interaction not documented. Error {e}.")
