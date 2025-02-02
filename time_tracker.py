@@ -54,6 +54,10 @@ class TIME_TRACKER_OT_time_table(bpy.types.Operator):
 
         data = read_json(get_time_track_file())
 
+        if not data:
+            layout.label(text="No tracked files yet.", icon='INFO')
+            return
+
         for file, attributes in data.items():
             box = layout.box()
             box.label(text=file)
@@ -96,11 +100,13 @@ class TimeTracker():
         self._last_timing = time.time()
         #TODO get props.time from file and (if existing and greater) ask user to overwrite/use existing time track from file
 
-
-    def load_session(self):
+    """
+    Get session from tracking file or create new with property time
+    """
+    def load_session(self, seconds: int = 0):
         self._timing_obj = TimingModel.load_single_from_json(file_path=get_time_track_file(), blend_file=bpy.data.filepath)
         if not self._timing_obj:
-            self._timing_obj = TimingModel(blend_file=bpy.data.filepath, seconds=0, sessions=[])
+            self._timing_obj = TimingModel(blend_file=bpy.data.filepath, seconds=seconds, sessions=[])
             
         self._timing_obj.add_session(0)
         print("Session loaded")
@@ -138,8 +144,8 @@ class TimeTracker():
             props.session_time = props.session_time + diff
             # I/O
             try:
-                if not self._timing_obj:
-                    self.load_session()
+                if not self._timing_obj or bpy.data.filepath != self._timing_obj.blend_file:
+                    self.load_session(props.time)
 
                 self._timing_obj.update_session(props.time, props.session_time)
 

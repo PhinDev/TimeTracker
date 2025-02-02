@@ -119,7 +119,9 @@ class TimingModel():
         self.seconds = seconds
         self.time_formatted = get_time_pretty(seconds=self.seconds)
         self.sessions = sessions
-        if not self.sessions and self.seconds > 0:
+        
+        #LEGACY
+        if not self.sessions and self.seconds > 0 and blend_file:
             self.add_session(session_seconds=self.seconds, date="Before")
 
 

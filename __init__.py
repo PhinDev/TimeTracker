@@ -31,7 +31,6 @@ def load_handler(dummy):
     if not bpy.app.timers.is_registered(init):
         bpy.app.timers.register(init, first_interval=0.1)
 
-    tt.load_session()
 
 
 @persistent
@@ -66,7 +65,8 @@ def init():
             print("Init - try again...")
             return 0.1
         props = c.scene.time_tracker_props
-        props.session_time = 0
+        if bpy.data.filepath:
+            props.session_time = 0
         props.tracking = True
         bpy.ops.wm.modal_event_logger()
         print(f"Init")
