@@ -16,6 +16,7 @@ def toggle_stop_and_go(self, context):
     except Exception as e:
         print(e)
 
+
 class TimeTrackerProperties(bpy.types.PropertyGroup):
 
     time: bpy.props.IntProperty(
@@ -46,7 +47,9 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
     interaction_threshhold: bpy.props.IntProperty(
         name="interaction_threshhold",
         description="Thresshold of inactivity (when to stop timing) in seconds",
-        default=120
+        default=120,
+        min=15,
+        max=3600
     ) # type: ignore
 
     # TODO UI sessions group per day

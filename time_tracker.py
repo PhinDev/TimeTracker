@@ -1,6 +1,6 @@
 import time
 import bpy
-import datetime
+from datetime import datetime, timedelta
 
 from .functions import TimingModel, get_properties, get_time_pretty, get_time_track_file, persist_time_info, read_json
 
@@ -98,7 +98,7 @@ class TimeTracker():
 
     def __init__(self):
         self._last_timing = time.time()
-        #TODO get props.time from file and (if existing and greater) ask user to overwrite/use existing time track from file
+        #TODO get props.time from file and (if existing and greater) ask user to overwrite/use existing time track from file <- Blend File always stays "Master"
 
     """
     Get session from tracking file or create new with property time
@@ -162,7 +162,7 @@ class TimeTracker():
                 props.time = props.time - props.interaction_threshhold
                 props.session_time = props.session_time - props.interaction_threshhold
                 print(f"{props.time} {props.interaction_threshhold}")
-                local_time = datetime.datetime.now() - datetime.timedelta(seconds=props.interaction_threshhold)
+                local_time = datetime.now() - timedelta(seconds=props.interaction_threshhold)
                 print(f"Not tracking due to inactivity. Stopped tracking at {local_time.strftime('%H:%M:%S')} - session time: {tt.get_session_time(props)}")
             props.tracking = False
             return
@@ -183,16 +183,21 @@ tt = TimeTracker()
 
 
 
+_last_autosave_check = time.time()
+
+
+# TODO modal operator is blocking blenders autosave function - use keymaps? or too specific??
+# https://blender.stackexchange.com/questions/267285/alternative-to-modal-operators-blocked-autosave?utm_source=chatgpt.com
 class ModalEventLoggerOperator(bpy.types.Operator):
-    """Ein Operator, der Benutzereingaben loggt, aber nicht blockiert"""
+    """Checks user interaction with blender for stopp & go function"""
     bl_idname = "wm.modal_event_logger"
     bl_label = "Modal Event Logger"
     
-    _timer = None
-
     def modal(self, context, event):
-        #if event.type == 'LEFTMOUSE':
-        #print(f"Event: {event.type}, Value: {event.value}")
+        if bpy.context.preferences.filepaths.use_auto_save_temporary_files and check_autosave():
+            # Restart modal operator so blender autosave can happen in between stop & restart
+            self.restart(context, delay=11)
+            return {'CANCELLED'}
 
         props = get_properties(context)
         if not props.stopp_and_go: # TODO optimize shutdown (less code when running)
@@ -202,11 +207,9 @@ class ModalEventLoggerOperator(bpy.types.Operator):
         track_last_interaction()
 
         # Weiterleiten des Events
-        return {'PASS_THROUGH'}  # 'PASS_THROUGH' sorgt dafür, dass das Event nicht blockiert wird
+        return {'PASS_THROUGH'}
 
     def execute(self, context):
-        # Timer hinzufügen (alle 0.1 Sekunden)
-        #self._timer = context.window_manager.event_timer_add(0.1, window=context.window) # hintergrund operationen (brauchen wir hier nicht)
         if context.window_manager.get("modal_logger_running", False):
             self.report({'WARNING'}, "Modal Logger already running!")
             self.cancel(context)
@@ -214,19 +217,45 @@ class ModalEventLoggerOperator(bpy.types.Operator):
         context.window_manager.modal_handler_add(self)
         context.window_manager["modal_logger_running"] = True
 
-        print("Logger started")
+        print(f"Logger started {datetime.now().strftime('%H:%M:%S')}")
         return {'RUNNING_MODAL'}
 
     def cancel(self, context):
-        # Timer entfernen, wenn der Operator gestoppt wird
-        #if self._timer:
-        #    context.window_manager.event_timer_remove(self._timer)
-
         context.window_manager["modal_logger_running"] = False
-        print("Logger stopped")
+        print(f"Logger stopped {datetime.now().strftime('%H:%M:%S')}")
+
+    def restart(self, context, delay):
+        self.cancel(context)
+        bpy.app.timers.register(revive_logger, first_interval=delay)
 
     def invoke(self, context, event):
         return self.execute(context)
+
+
+def check_autosave():
+    global _last_autosave_check
+
+    if not bpy.data.is_dirty:
+        # no dirty data, no autosave
+        _last_autosave_check = time.time()
+        return False
+    
+    intervall = bpy.context.preferences.filepaths.auto_save_time * 60
+    diff = time.time() - _last_autosave_check - intervall
+    if not diff > 0:
+        # autosave interval not reached
+        return False
+
+    print(f"Autosave is pending")
+    _last_autosave_check = time.time()
+    return True
+    
+
+
+def revive_logger():
+    print(f"Reviving Logger...")
+    bpy.ops.wm.modal_event_logger()
+    return None
 
 
 import time
