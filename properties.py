@@ -6,6 +6,10 @@ from .functions import get_properties
 
 TIME_TRACK_FILE = 'time_tracks.json'
 
+LOGGER_DISABLED = "0"
+LOGGER_RUNNING = "1"
+LOGGER_SLEEPING = "2" # actually disabled but waiting for revive
+
 
 def toggle_stop_and_go(self, context):
     try:
@@ -42,6 +46,12 @@ class TimeTrackerProperties(bpy.types.PropertyGroup):
         description="Detects inactivity based on threshhold and stopps/starts tracking",
         default=True,
         update=toggle_stop_and_go
+    ) # type: ignore
+
+    autosave_compatibility: bpy.props.BoolProperty(
+        name="autosave compatibility mode",
+        description="Shuts down modal operator for a moment (autosave interval) allowing blender to perform autosave (might affect 'stopp & go' user experience)",
+        default=True
     ) # type: ignore
 
     interaction_threshhold: bpy.props.IntProperty(

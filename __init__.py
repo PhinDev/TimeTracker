@@ -17,6 +17,7 @@ import bpy
 
 
 from .functions import get_properties
+from .properties import LOGGER_RUNNING
 from .time_tracker import tt
 from . import auto_load
 from bpy.app.handlers import persistent
@@ -50,7 +51,7 @@ def track_timer():
         if context.scene:
             # ONLY HERE DO STH.
             props = get_properties(context)
-            tt.update_time(props)
+            tt.update_time(props, context.window_manager.get("modal_logger_state", LOGGER_RUNNING))
             #print(f"Track timer is running...{time}")
     except Exception as e:
         print(f"Error in Time Tracker: {e}")

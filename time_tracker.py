@@ -3,6 +3,7 @@ import bpy
 from datetime import datetime, timedelta
 
 from .functions import TimingModel, get_properties, get_time_pretty, get_time_track_file, persist_time_info, read_json
+from .properties import LOGGER_DISABLED, LOGGER_RUNNING, LOGGER_SLEEPING
 
 # TODO groups for blend files (time table etc.)
 # TODO tracking hours per day with dates etc.
@@ -126,7 +127,7 @@ class TimeTracker():
     """
     updates overall time and session through blend properties & Timing Data Interface "TimingModel"
     """
-    def update_time(self, props):
+    def update_time(self, props, logger_state):
         now = int(time.time()) # only seconds needed 
         if now == self._last_timing:
             return 0 # prevent 'washing' the last timestamp
@@ -136,7 +137,7 @@ class TimeTracker():
 
         # set inactive (stop)
         if props.stopp_and_go:
-            self.stopp_and_go(props, now) # set props.tracking autom.
+            self.stopp_and_go(props, now, logger_state) # set props.tracking autom.
             
         if props.tracking:
             # Blender Properties
@@ -155,7 +156,12 @@ class TimeTracker():
         return props.time
     
 
-    def stopp_and_go(self, props, now):
+    def stopp_and_go(self, props, now, logger_state: int = LOGGER_RUNNING):
+        if props.tracking and logger_state == LOGGER_SLEEPING:
+            track_last_interaction()
+            print("Assuming activity...")
+            return
+
         if self._last_interaction_time > 0 and (now - self._last_interaction_time) > props.interaction_threshhold:
             # USER INACTIVE
             if props.tracking:
@@ -169,6 +175,7 @@ class TimeTracker():
 
         # USER ACTIVE
         if not props.tracking:
+            print(f"Resume tracking {datetime.now().strftime('%H:%M:%S')}")
             props.tracking = True
 
 
@@ -187,19 +194,22 @@ _last_autosave_check = time.time()
 
 
 # TODO modal operator is blocking blenders autosave function - use keymaps? or too specific??
+# with the compatibility mode it's likely the user will have a delayed interactivity detection (bc. modal operator is shut down atm.) 
+# TODO settings - delay / compatibility on/off ?
 # https://blender.stackexchange.com/questions/267285/alternative-to-modal-operators-blocked-autosave?utm_source=chatgpt.com
 class ModalEventLoggerOperator(bpy.types.Operator):
     """Checks user interaction with blender for stopp & go function"""
     bl_idname = "wm.modal_event_logger"
     bl_label = "Modal Event Logger"
-    
+
     def modal(self, context, event):
-        if bpy.context.preferences.filepaths.use_auto_save_temporary_files and check_autosave():
+        props = get_properties(context)
+
+        if props.autosave_compatibility and bpy.context.preferences.filepaths.use_auto_save_temporary_files and check_autosave():
             # Restart modal operator so blender autosave can happen in between stop & restart
             self.restart(context, delay=11)
             return {'CANCELLED'}
 
-        props = get_properties(context)
         if not props.stopp_and_go: # TODO optimize shutdown (less code when running)
             self.cancel(context)
             return {'CANCELLED'}
@@ -210,22 +220,22 @@ class ModalEventLoggerOperator(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
     def execute(self, context):
-        if context.window_manager.get("modal_logger_running", False):
+        if context.window_manager.get("modal_logger_state", LOGGER_DISABLED) == LOGGER_RUNNING:
             self.report({'WARNING'}, "Modal Logger already running!")
-            self.cancel(context)
             
         context.window_manager.modal_handler_add(self)
-        context.window_manager["modal_logger_running"] = True
+        context.window_manager["modal_logger_state"] = LOGGER_RUNNING
 
         print(f"Logger started {datetime.now().strftime('%H:%M:%S')}")
         return {'RUNNING_MODAL'}
 
     def cancel(self, context):
-        context.window_manager["modal_logger_running"] = False
+        context.window_manager["modal_logger_state"] = LOGGER_DISABLED
         print(f"Logger stopped {datetime.now().strftime('%H:%M:%S')}")
 
     def restart(self, context, delay):
-        self.cancel(context)
+        context.window_manager["modal_logger_state"] = LOGGER_SLEEPING
+        print(f"Logger sleeping {datetime.now().strftime('%H:%M:%S')}")
         bpy.app.timers.register(revive_logger, first_interval=delay)
 
     def invoke(self, context, event):

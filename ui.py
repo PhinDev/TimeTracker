@@ -29,7 +29,10 @@ class UI_TimeTracker(bpy.types.Panel):
         
         box.prop(props, 'stopp_and_go', text="Stopp & Go")
         if props.stopp_and_go:
+            box = box.box()
             box.prop(props, 'interaction_threshhold', text="Inactivity Threshhold (s)")
+            if bpy.context.preferences.filepaths.use_auto_save_temporary_files:
+                box.prop(props, "autosave_compatibility")
         else:
             if props.tracking:
                 box.operator("time_tracker.pause", icon='PAUSE', text='Pause')
