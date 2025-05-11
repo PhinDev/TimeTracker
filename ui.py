@@ -88,7 +88,7 @@ def filter_valid(session, filter):
         return True
     
     for date in session["dates"]:
-        if date.lower().startswith(filter.lower()):
+        if filter.lower() in date.lower():
             return True
     
     try:

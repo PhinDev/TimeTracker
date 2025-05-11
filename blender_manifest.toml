@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "time_tracker"
-version = "0.2.2"
+version = "0.2.3"
 name = "Time Tracker"
 tagline = "This extension tracks your time spent in blend files"
 maintainer = "Phineas Engl"

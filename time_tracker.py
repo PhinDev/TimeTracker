@@ -148,6 +148,10 @@ class TimeTracker():
                 if not self._timing_obj or bpy.data.filepath != self._timing_obj.blend_file:
                     self.load_session(props.time)
 
+                # file overwrites blender prop
+                #if self._timing_obj.seconds > props.time:
+                #    props.time = self._timing_obj.seconds
+
                 self._timing_obj.update_session(props.time, props.session_time)
 
             except Exception as e:

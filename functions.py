@@ -67,9 +67,8 @@ def get_blender_path(path):
 
 import datetime
 def get_time_pretty(seconds: int) -> str:
-    time = str(datetime.timedelta(seconds=seconds))
-    hours, minutes, seconds = time.split(':')
-    return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+    delta = datetime.timedelta(seconds=seconds)
+    return f"{delta}"
 
 
 """
@@ -140,7 +139,6 @@ class TimingModel():
             "id": session_id,
             "dates": dates,
             "seconds": session_seconds,
-            "time": get_time_pretty(seconds=session_seconds)
         }
         self.sessions.append(session)
         print(f"Session added {session['id']}")
@@ -162,7 +160,6 @@ class TimingModel():
         if date not in session["dates"]:
             session["dates"].append(date)
 
-        session["time"] = get_time_pretty(seconds=session_seconds)
         #print(f"Session updated {session['id']}")
     
 
@@ -178,7 +175,6 @@ class TimingModel():
         return {
             self.blend_file: {
                 "seconds": self.seconds,
-                "time": self.time_formatted,
                 "sessions": self.sessions
             }
         }
