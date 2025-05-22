@@ -170,6 +170,13 @@ class TimingModel():
     def remove_session(self, session_id: int):
         self.sessions = [s for s in self.sessions if s["id"] != session_id]
     
+    
+    def reset_time(self):
+        self.seconds = 0
+        self.time_formatted = get_time_pretty(seconds=self.seconds)
+        self.sessions = []
+        self.add_session(0)
+
 
     def to_dict(self) -> dict:
         return {

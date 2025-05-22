@@ -29,10 +29,7 @@ class UI_TimeTracker(bpy.types.Panel):
         
         box.prop(props, 'stopp_and_go', text="Stopp & Go")
         if props.stopp_and_go:
-            box = box.box()
             box.prop(props, 'interaction_threshhold', text="Inactivity Threshhold (s)")
-            if bpy.context.preferences.filepaths.use_auto_save_temporary_files:
-                box.prop(props, "autosave_compatibility")
         else:
             if props.tracking:
                 box.operator("time_tracker.pause", icon='PAUSE', text='Pause')
@@ -44,7 +41,28 @@ class UI_TimeTracker(bpy.types.Panel):
         box = layout.box()
         box.operator("time_tracker.show_time_table", text="Show Time Table")
         # TODO button to open time track file
-       
+ 
+
+class SettingsPanel(bpy.types.Panel):
+    bl_label = "Settings"
+    bl_idname = "SCENE_PT_timetracker_settings_panel"
+    bl_space_type = 'VIEW_3D'  # Correct space type for the 3D View
+    bl_region_type = 'UI'  # 'UI' is the region type for the Sidebar
+    bl_context = "objectmode"  # You can change this depending on the context where you want the panel to appear
+    bl_category = "Time Tracker"
+    bl_parent_id = "SCENE_PT_timetracker_panel"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw(self, context):
+        props = get_properties(context)
+        layout = self.layout
+
+        if bpy.context.preferences.filepaths.use_auto_save_temporary_files:
+            layout.prop(props, "autosave_compatibility")
+
+        layout.operator("time_tracker.reset_time", text="Reset time") # WARNING!
+
+      
 
 class SessionPanel(bpy.types.Panel):
     bl_label = "Sessions"

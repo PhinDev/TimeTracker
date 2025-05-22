@@ -85,6 +85,28 @@ class TIME_TRACKER_OT_time_table(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=600)
     
 
+class TIME_TRACKER_OT_reset_time(bpy.types.Operator):
+    bl_idname = "time_tracker.reset_time"
+    bl_label = "Reset Time"
+    bl_description = "Resets time data of the tracked file"
+
+    def execute(self, context):
+        props = get_properties(context)
+        tt.reset_time(props)
+
+        self.report({'INFO'}, f"Time data deleted. Starting at {props.time}.")
+        return {'FINISHED'}
+    
+    # Dialog-Inhalt
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="This will delete this files' time data!", icon='WARNING_LARGE')
+            
+    def invoke(self, context, event):
+        # Öffnet eine Popup-Form
+        return context.window_manager.invoke_props_dialog(self)
+    
+
    
 # TODO if file changes might interfere w/ last inter time - reset on load_file?
 class TimeTracker():
@@ -185,6 +207,13 @@ class TimeTracker():
 
     def get_all_sessions(self):
         return self._timing_obj.sessions if self._timing_obj else None
+
+
+    def reset_time(self, props):
+        props.time = 0
+        props.session_time = 0
+        self._timing_obj.reset_time()
+        self.save()
 
 
     def save(self):
